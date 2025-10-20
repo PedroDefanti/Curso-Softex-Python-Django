@@ -1,0 +1,1 @@
+essa aula foi para decidir o projeto e revisar o sqlite3
