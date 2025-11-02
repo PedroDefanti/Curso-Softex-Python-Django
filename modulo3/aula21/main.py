@@ -1,4 +1,4 @@
-from user_model import UserModel
+from modulo3.sql_praticas.user_model import UserModel
 
 
 def display_menu():

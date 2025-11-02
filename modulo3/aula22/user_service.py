@@ -1,5 +1,5 @@
 # user_service.py
-from user_model import UserModel
+from modulo3.sql_praticas.user_model import UserModel
 from hasher import hash_senha, verificar_senha
 
 

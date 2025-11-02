@@ -1,7 +1,7 @@
 # user_model.py
 import sqlite3
 from datetime import datetime
-from database import DatabaseConnection
+from modulo3.sql_praticas.database import DatabaseConnection
 
 
 class UserModel:
