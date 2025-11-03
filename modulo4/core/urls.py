@@ -11,4 +11,3 @@ urlpatterns=[
         views.frase,
         name='frase',),
 ]
-m
