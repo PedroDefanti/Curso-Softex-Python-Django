@@ -8,3 +8,7 @@ Pygments==2.19.2
 pytest==8.4.2
 pytest-cov==7.0.0
 pytest-mock==3.15.1
+asgiref==3.10.0
+Django==5.2.7
+sqlparse==0.5.3
+tzdata==2025.2
