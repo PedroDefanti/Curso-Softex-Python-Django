@@ -1,12 +1,15 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Olá,Mundo! (Vindo de um templates)</h1>
-    <p>Este HTML está separado do código do meu código Python. Isso é ótimo</p>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block title %}Página Inicial - Meu Site{% endblock %}
+{% block content %}
+<h1>Olá, {{ nome_usuario }}!</h1>
+<p>Este HTML está separado do meu código Python.</p>
+<h3>Tecnologias que estou aprendendo:</h3>
+<ul>
+{% for tec in tecnologias %}
+<li>{{ tec }}</li>
+{% endfor %}
+</ul>
+{% if nome_usuario == 'Júnior' %}
+<p>Este é um conteúdo especial para o Júnior!</p>
+{% endif %}
+{% endblock %}
