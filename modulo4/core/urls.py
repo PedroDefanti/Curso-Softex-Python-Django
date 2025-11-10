@@ -6,8 +6,5 @@ urlpatterns = [
         '',
         views.home,
         name='home',),
-    path(
-        'call/',
-        views.call,
-        name='call',),
+
 ]
