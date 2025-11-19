@@ -8,5 +8,7 @@ urlpatterns = [
     
     path('tarefa/<int:pk>/deletar',views.deletar_tarefa,name='deletar_tarefa'),
     
+    path('register',views.register,name='register')
+    
     
 ]
