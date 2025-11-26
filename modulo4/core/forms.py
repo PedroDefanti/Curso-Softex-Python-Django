@@ -1,9 +1,14 @@
 from django import forms
 from .models import Tarefa # Importe o Model
+from projects.models import Project
 # Esta classe herda de 'ModelForm'
 class TarefaForm(forms.ModelForm):
-# A "mágica" acontece aqui, na classe 'Meta'
+    def __init__(self,*args,**kwargs):
+        user=kwargs.pop('user',None)
+        super(TarefaForm,self).__init__(*args,**kwargs)
+        if user:
+            self.fields['project'].queryset= Project.objects.filter(user=user)
+    
     class Meta:
-    # 1. Diga ao form qual Model ele deve usar
-        model = Tarefa
-        fields = ['titulo',]
+        model=Tarefa
+        fields=['titulo','project']
