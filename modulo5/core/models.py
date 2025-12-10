@@ -37,6 +37,11 @@ class Tarefa(models.Model):
     )
     
     prazo=models.DateField(null=True,blank=True)
+    
+    data_concuida=models.DateField(
+        blank=True,
+        null=True
+    )
 
      
     
