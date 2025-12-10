@@ -18,8 +18,10 @@ class TarefaSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Tarefa
-        fields = ['id','user','titulo','descricao','concluida','prioridade','prazo','criada_em']
+        fields = ['id','user','titulo','descricao','concluida','prioridade','prazo','criada_em','data_concuida']
         read_only_fields = ['id', 'criada_em']
+        
+        
         
     
         
@@ -71,7 +73,18 @@ class TarefaSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'prazo': 'O prazo é obrigatório para  concluídas.'
                 })
+        
+
 
         return data
+    
+    
+    def validate_concluida(self,data):
+        concluida = data.get('concluida', False)
+        if concluida:
+            data_concuida=data.get(data['data_concuida'].today())
+    
+    
+    
     
     

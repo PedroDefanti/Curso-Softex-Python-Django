@@ -7,6 +7,7 @@ from django.db import IntegrityError
 import logging
 from django.db.models import Count, Q
 logger = logging.getLogger(__name__)
+from django.shortcuts import get_object_or_404
 
 
 class ListaTarefasAPIView(APIView):
@@ -82,3 +83,77 @@ class EstatisticasTarefasAPIView(APIView):
                 {'error': 'Erro ao gerar estatísticas.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+            
+            
+            
+            
+class DetalheTarefaAPIView(APIView):
+    def get_object(self, pk):
+        """
+        Busca a tarefa pelo ID e retorna 404 se não encontrada.
+        """
+        return get_object_or_404(Tarefa, pk=pk)
+
+    # ...
+    
+    def get(self, request, pk, format=None):
+        # ^^
+        # Parâmetro capturado da URL
+        tarefas=self.get_object(pk)
+        serializer=TarefaSerializer(tarefas)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+    
+    
+    def put(self, request, pk, format=None):
+        """
+        Atualiza tarefa completamente (substituição total).
+        Exige que TODOS os campos editáveis sejam enviados.
+        """
+        # 1. BUSCAR: Obter o objeto existente
+        tarefa = self.get_object(pk)
+        # 2. SERIALIZAR: Passar objeto antigo E novos dados
+        serializer = TarefaSerializer(tarefa, data=request.data)
+        # ^^^^^ ^^^^^^^^^^^^^^^^
+        # | Nova versão
+        # Versão atual
+        # 3. VALIDAR: Checar se JSON está completo e válido
+        if serializer.is_valid():
+        # 4. SALVAR: Atualizar no banco
+            serializer.save()
+        # 5. RESPONDER: Retornar objeto atualizado
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        # ERRO: Retornar erros de validação
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self, request, pk, format=None):
+        """
+        Atualiza tarefa completamente (substituição total).
+        Exige que PARCIAL os campos editáveis sejam enviados.
+        """
+        # 1. BUSCAR: Obter o objeto existente
+        tarefa = self.get_object(pk)
+        # 2. SERIALIZAR: Passar objeto antigo E novos dados
+        serializer = TarefaSerializer(tarefa, data=request.data,partial=True)
+        # ^^^^^ ^^^^^^^^^^^^^^^^
+        # | Nova versão
+        # Versão atual
+        # 3. VALIDAR: Checar se JSON está completo e válido
+        if serializer.is_valid():
+        # 4. SALVAR: Atualizar no banco
+            serializer.save()
+        # 5. RESPONDER: Retornar objeto atualizado
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        # ERRO: Retornar erros de validação
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        """
+        Remove um recurso específico.
+        """
+        # 1. BUSCAR: Obter o objeto (trata 404 se não existir)
+        tarefa = self.get_object(pk)
+        # 2. DELETAR
+        tarefa.delete()
+        # 3. RESPONDER: 204 No Content (sucesso sem corpo de resposta)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
