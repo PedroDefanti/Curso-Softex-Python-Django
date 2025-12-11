@@ -18,7 +18,7 @@ class TarefaSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Tarefa
-        fields = ['id','user','titulo','descricao','concluida','prioridade','prazo','criada_em','data_concuida']
+        fields = '__all__'
         read_only_fields = ['id', 'criada_em']
         
         
@@ -71,20 +71,40 @@ class TarefaSerializer(serializers.ModelSerializer):
        
         if not concluida and not prazo:
                 raise serializers.ValidationError({
-                    'prazo': 'O prazo é obrigatório para  concluídas.'
+                    'prazo': 'O prazo é obrigatório para tarefas não concluídas.'
                 })
         
 
 
         return data
+
+    def update(self, instance, validated_data):
+ 
+        concluida = validated_data.get('concluida', instance.concluida)
+
+        if concluida and not instance.data_concuida:
+            validated_data['data_concuida'] = now().date()
+
+        if not concluida and instance.data_concuida:
+            validated_data['data_concuida'] = None
+        
+        return super().update(instance, validated_data)
     
-    
-    def validate_concluida(self,data):
-        concluida = data.get('concluida', False)
-        if concluida:
-            data_concuida=data.get(data['data_concuida'].today())
-    
-    
-    
-    
-    
+    def create(self, validated_data):
+
+        concluida = validated_data.get('concluida', False)
+        if concluida and 'data_concuida' not in validated_data:
+            validated_data['data_concuida'] = now().date()
+        
+        return super().create(validated_data)
+
+class ConcluirTodasSerializer(serializers.Serializer):
+    prioridade = serializers.ChoiceField(
+        choices=['baixa', 'media', 'alta'],
+        required=False,
+        help_text='Filtrar por prioridade específica'
+    )
+    user = serializers.IntegerField(
+        required=False,
+        help_text='Filtrar por ID do usuário'
+    )

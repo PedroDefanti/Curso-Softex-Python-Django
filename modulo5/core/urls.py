@@ -1,5 +1,5 @@
 from django.urls import path 
-from .views import ListaTarefasAPIView, ContagemTarefasAPIView, EstatisticasTarefasAPIView,DetalheTarefaAPIView
+from .views import ListaTarefasAPIView, ContagemTarefasAPIView, EstatisticasTarefasAPIView,DetalheTarefaAPIView,DuplicarTarefaAPIView,ConcluirTodasTarefasAPIView
 # Namespace do app (útil para reverse()) 
 app_name = 'core' 
 urlpatterns = [ 
@@ -8,7 +8,8 @@ urlpatterns = [
     path('tarefas/contagem/',ContagemTarefasAPIView.as_view(),name='contagem-tarefas'),
     path('tarefas/estatisticas',EstatisticasTarefasAPIView.as_view(),name='estatisticas-tarefas'),
     path('tarefas/<int:pk>/',DetalheTarefaAPIView.as_view(),name='detalhe-tarefa'),
-# ^^^^^^^^
-# Captura o ID e passa para a view
+    path('tarefas/<int:pk>/duplicar/', DuplicarTarefaAPIView.as_view(), name='duplicar-tarefa'),
+    path('tarefas/concluir-todas/', ConcluirTodasTarefasAPIView.as_view(), name='concluir-todas'),
+
 ]
 

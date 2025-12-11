@@ -2,12 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Tarefa
-from .serializers import TarefaSerializer
+from .serializers import TarefaSerializer, ConcluirTodasSerializer
 from django.db import IntegrityError
 import logging
 from django.db.models import Count, Q
 logger = logging.getLogger(__name__)
 from django.shortcuts import get_object_or_404
+from django.utils.timezone import now
 
 
 class ListaTarefasAPIView(APIView):
@@ -89,71 +90,143 @@ class EstatisticasTarefasAPIView(APIView):
             
 class DetalheTarefaAPIView(APIView):
     def get_object(self, pk):
-        """
-        Busca a tarefa pelo ID e retorna 404 se não encontrada.
-        """
         return get_object_or_404(Tarefa, pk=pk)
-
-    # ...
-    
     def get(self, request, pk, format=None):
-        # ^^
-        # Parâmetro capturado da URL
+
         tarefas=self.get_object(pk)
         serializer=TarefaSerializer(tarefas)
         return Response(serializer.data,status=status.HTTP_200_OK)
     
     
     def put(self, request, pk, format=None):
-        """
-        Atualiza tarefa completamente (substituição total).
-        Exige que TODOS os campos editáveis sejam enviados.
-        """
-        # 1. BUSCAR: Obter o objeto existente
         tarefa = self.get_object(pk)
-        # 2. SERIALIZAR: Passar objeto antigo E novos dados
+        if tarefa.prioridade == 'alta' and request.data.get('concluida') and not tarefa.concluida:
+            pass
+
         serializer = TarefaSerializer(tarefa, data=request.data)
-        # ^^^^^ ^^^^^^^^^^^^^^^^
-        # | Nova versão
-        # Versão atual
-        # 3. VALIDAR: Checar se JSON está completo e válido
         if serializer.is_valid():
-        # 4. SALVAR: Atualizar no banco
             serializer.save()
-        # 5. RESPONDER: Retornar objeto atualizado
+
             return Response(serializer.data, status=status.HTTP_200_OK)
-        # ERRO: Retornar erros de validação
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def patch(self, request, pk, format=None):
-        """
-        Atualiza tarefa completamente (substituição total).
-        Exige que PARCIAL os campos editáveis sejam enviados.
-        """
-        # 1. BUSCAR: Obter o objeto existente
         tarefa = self.get_object(pk)
-        # 2. SERIALIZAR: Passar objeto antigo E novos dados
-        serializer = TarefaSerializer(tarefa, data=request.data,partial=True)
-        # ^^^^^ ^^^^^^^^^^^^^^^^
-        # | Nova versão
-        # Versão atual
-        # 3. VALIDAR: Checar se JSON está completo e válido
+
+        if tarefa.prioridade == 'alta' and request.data.get('concluida') and not tarefa.concluida:
+            return Response(
+                {
+                    'error': 'Tarefas de alta prioridade só podem ser concluídas via PUT (atualização completa).',
+                    'detail': 'Use o método PUT com todos os campos para concluir esta tarefa.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = TarefaSerializer(tarefa, data=request.data, partial=True)
         if serializer.is_valid():
-        # 4. SALVAR: Atualizar no banco
+
             serializer.save()
-        # 5. RESPONDER: Retornar objeto atualizado
+
             return Response(serializer.data, status=status.HTTP_200_OK)
-        # ERRO: Retornar erros de validação
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        """
-        Remove um recurso específico.
-        """
-        # 1. BUSCAR: Obter o objeto (trata 404 se não existir)
         tarefa = self.get_object(pk)
-        # 2. DELETAR
+
         tarefa.delete()
-        # 3. RESPONDER: 204 No Content (sucesso sem corpo de resposta)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+class DuplicarTarefaAPIView(APIView):
+    
+    def post(self, request, pk, format=None):
+
+        tarefa_original = get_object_or_404(Tarefa, pk=pk)
+
+        dados_duplicados = {
+            'user': tarefa_original.user.id,
+            'titulo': f"{tarefa_original.titulo} (Cópia)",
+            'descricao': tarefa_original.descricao,
+            'prioridade': tarefa_original.prioridade,
+            'prazo': tarefa_original.prazo,
+            'concluida': False, 
+
+        }
+
+        serializer = TarefaSerializer(data=dados_duplicados)
+        
+        if serializer.is_valid():
+
+            nova_tarefa = serializer.save()
+            logger.info(f"[INFO]: Tarefa {pk} duplicada com sucesso. Nova tarefa ID: {nova_tarefa.id}")
+            
+            return Response(
+                {
+                    'mensagem': 'Tarefa duplicada com sucesso.',
+                    'original_id': tarefa_original.id,
+                    'nova_tarefa': serializer.data
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        logger.warning(f"[WARNING]: Erro ao duplicar tarefa {pk}: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ConcluirTodasTarefasAPIView(APIView):
+    
+    def patch(self, request, format=None):
+
+        filtros = {}
+        prioridade = request.data.get('prioridade') or request.query_params.get('prioridade')
+        user_id = request.data.get('user') or request.query_params.get('user')
+        queryset = Tarefa.objects.filter(concluida=False)
+
+        if prioridade:
+            if prioridade.lower() not in ['baixa', 'media', 'alta']:
+                return Response(
+                    {'error': 'Prioridade inválida. Use: baixa, media ou alta.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            queryset = queryset.filter(prioridade=prioridade.lower())
+        
+        if user_id:
+            try:
+                user_id = int(user_id)
+                queryset = queryset.filter(user_id=user_id)
+            except ValueError:
+                return Response(
+                    {'error': 'ID de usuário inválido.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        total_tarefas = queryset.count()
+        
+        if total_tarefas == 0:
+            return Response(
+                {
+                    'mensagem': 'Nenhuma tarefa pendente encontrada com os filtros aplicados.',
+                    'tarefas_atualizadas': 0
+                },
+                status=status.HTTP_200_OK
+            )
+
+        data_hoje = now().date()
+        tarefas_atualizadas = queryset.update(
+            concluida=True,
+            data_concuida=data_hoje
+        )
+        
+        logger.info(f"[INFO]: {tarefas_atualizadas} tarefas concluídas em lote.")
+
+        return Response(
+            {
+                'mensagem': 'Tarefas concluídas com sucesso.',
+                'tarefas_atualizadas': tarefas_atualizadas,
+                'data_conclusao': data_hoje,
+                'filtros_aplicados': {
+                    'prioridade': prioridade,
+                    'user_id': user_id
+                }
+            },
+            status=status.HTTP_200_OK
+        )
