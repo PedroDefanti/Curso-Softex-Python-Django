@@ -1,5 +1,5 @@
 from django.urls import path 
-from .views import ListaTarefasAPIView, ContagemTarefasAPIView, EstatisticasTarefasAPIView,DetalheTarefaAPIView,DuplicarTarefaAPIView,ConcluirTodasTarefasAPIView
+from .views import ListaTarefasAPIView, ContagemTarefasAPIView, EstatisticasTarefasAPIView,DetalheTarefaAPIView,DuplicarTarefaAPIView,ConcluirTodasTarefasAPIView,LogoutView
 # Namespace do app (útil para reverse()) 
 app_name = 'core' 
 urlpatterns = [ 
@@ -10,6 +10,8 @@ urlpatterns = [
     path('tarefas/<int:pk>/',DetalheTarefaAPIView.as_view(),name='detalhe-tarefa'),
     path('tarefas/<int:pk>/duplicar/', DuplicarTarefaAPIView.as_view(), name='duplicar-tarefa'),
     path('tarefas/concluir-todas/', ConcluirTodasTarefasAPIView.as_view(), name='concluir-todas'),
+    path('logout/', LogoutView.as_view(), name='logout'), # ← Novo endpoint
+
 
 ]
 
