@@ -9,6 +9,18 @@ from django.db.models import Count, Q
 logger = logging.getLogger(__name__)
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+class MinhaView(APIView):
+# Adicionando a permissão
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+    # Se chegou aqui, request.user é SEMPRE um objeto User logado
+        print(f"Usuário autenticado: {request.user.username}")
+        return Response(f'Usuario Autenticado:{request.user.username}',status=status.HTTP_200_OK)
+# ...
 
 
 class ListaTarefasAPIView(APIView):
@@ -230,3 +242,18 @@ class ConcluirTodasTarefasAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
+        
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh")
+            token = RefreshToken(refresh_token)
+            token.blacklist() # Adiciona o token à lista negra
+            
+            return Response({"detail": "Logout realizado com sucesso."},status=status.HTTP_205_RESET_CONTENT,)
+        except Exception: # Captura exceções como token_not_valid
+            return Response(
+            {"detail": "Token inválido."},
+            status=status.HTTP_400_BAD_REQUEST)
