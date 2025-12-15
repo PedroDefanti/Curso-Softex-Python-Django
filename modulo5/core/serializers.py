@@ -12,6 +12,8 @@ class TarefaSerializer(serializers.ModelSerializer):
             'max_length': 'O título não pode ter mais de 200 caracteres.'
             }
         )
+    user = serializers.StringRelatedField(read_only=True)
+
     
     
     
@@ -19,7 +21,7 @@ class TarefaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tarefa
         fields = '__all__'
-        read_only_fields = ['id', 'criada_em']
+        read_only_fields = ['id', 'user', 'criada_em']
         
         
         
