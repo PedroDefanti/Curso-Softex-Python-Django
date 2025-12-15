@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 import environ
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -42,7 +43,29 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'core',
+    'rest_framework_simplejwt.token_blacklist'
 ]
+
+REST_FRAMEWORK = {
+'DEFAULT_AUTHENTICATION_CLASSES': (
+'rest_framework_simplejwt.authentication.JWTAuthentication',
+),
+
+}
+
+SIMPLE_JWT = {
+# Tempo de vida do Access Token (curto!)
+'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+# Tempo de vida do Refresh Token (longo!)
+'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+# Define o esquema de autenticação no header HTTP
+'AUTH_HEADER_TYPES': ('Bearer',),
+# Algoritmo de criptografia
+'ALGORITHM': 'HS256',
+# Nome do campo de usuário no payload (user_id é padrão)
+'USER_ID_CLAIM': 'user_id',
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
