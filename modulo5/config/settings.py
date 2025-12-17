@@ -42,28 +42,32 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'core',
-    'rest_framework_simplejwt.token_blacklist'
 ]
 
 REST_FRAMEWORK = {
-'DEFAULT_AUTHENTICATION_CLASSES': (
-'rest_framework_simplejwt.authentication.JWTAuthentication',
-),
-
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '3000/day',
+    },
 }
 
 SIMPLE_JWT = {
-# Tempo de vida do Access Token (curto!)
-'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
-# Tempo de vida do Refresh Token (longo!)
-'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-# Define o esquema de autenticação no header HTTP
-'AUTH_HEADER_TYPES': ('Bearer',),
-# Algoritmo de criptografia
-'ALGORITHM': 'HS256',
-# Nome do campo de usuário no payload (user_id é padrão)
-'USER_ID_CLAIM': 'user_id',
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'ALGORITHM': 'HS256',
+    'USER_ID_CLAIM': 'user_id',
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 

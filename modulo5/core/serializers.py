@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import Tarefa
 from django.utils import timezone
 from django.utils.timezone import now
+from django.contrib.auth.models import User,Group
+
 
 class TarefaSerializer(serializers.ModelSerializer):
     titulo = serializers.CharField(
@@ -110,3 +112,35 @@ class ConcluirTodasSerializer(serializers.Serializer):
         required=False,
         help_text='Filtrar por ID do usuário'
     )
+    
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    # Definimos 'write_only=True' para que a senha seja aceita no cadastro (POST),
+    # mas NUNCA seja devolvida na resposta (Response JSON).
+    password = serializers.CharField(
+    write_only=True,
+    required=True,
+    style={'input_type': 'password'}
+    )
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password']
+    def create(self, validated_data):
+# 1. Cria o usuário com segurança
+        password = validated_data.pop('password')
+        user = User.objects.create_user(
+        username=validated_data['username'],
+        email=validated_data.get('email', ''),
+        password=password
+        )
+        # 2. Lógica de Atribuição de Cargo (Role)
+        try:
+            # Busca o grupo 'Comum'
+            grupo_comum = Group.objects.get(name='Comum')
+            # Adiciona o usuário ao grupo
+            user.groups.add(grupo_comum)
+        except Group.DoesNotExist:
+            # Fallback: Se o grupo não existir, o usuário é criado sem grupo.
+            # Em produção, deveríamos logar um erro aqui.
+            pass
+        return user
