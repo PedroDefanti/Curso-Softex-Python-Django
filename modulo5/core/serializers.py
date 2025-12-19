@@ -115,8 +115,7 @@ class ConcluirTodasSerializer(serializers.Serializer):
     
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    # Definimos 'write_only=True' para que a senha seja aceita no cadastro (POST),
-    # mas NUNCA seja devolvida na resposta (Response JSON).
+
     password = serializers.CharField(
     write_only=True,
     required=True,
@@ -126,21 +125,82 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'password']
     def create(self, validated_data):
-# 1. Cria o usuário com segurança
+
         password = validated_data.pop('password')
         user = User.objects.create_user(
         username=validated_data['username'],
         email=validated_data.get('email', ''),
         password=password
         )
-        # 2. Lógica de Atribuição de Cargo (Role)
+
         try:
-            # Busca o grupo 'Comum'
+
             grupo_comum = Group.objects.get(name='Comum')
-            # Adiciona o usuário ao grupo
+
             user.groups.add(grupo_comum)
         except Group.DoesNotExist:
-            # Fallback: Se o grupo não existir, o usuário é criado sem grupo.
-            # Em produção, deveríamos logar um erro aqui.
+
             pass
         return user
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name']
+        read_only_fields = ['email']
+
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+
+    grupos = serializers.StringRelatedField(many=True, source='groups', read_only=True)
+
+    cargo = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 
+            'username', 
+            'email',
+            'grupos',
+            'cargo'
+        ]
+        read_only_fields = ['email',]
+    
+    def get_cargo(self, obj):
+
+        first_group = obj.groups.first()
+        return first_group.name if first_group else None
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+
+    senha_antiga = serializers.CharField(
+        required=True,
+        write_only=True,
+        style={'input_type': 'password'}
+    )
+    nova_senha = serializers.CharField(
+        required=True,
+        write_only=True,
+        min_length=8,
+        style={'input_type': 'password'},
+        error_messages={
+            'minimo': 'A nova senha deve ter pelo menos 8 caracteres.'
+        }
+    )
+    senha_certa = serializers.CharField(
+        required=True,
+        write_only=True,
+        style={'input_type': 'password'}
+    )
+    
+    def validate(self, data):
+
+        if data.get('new_password') != data.get('confirm_password'):
+            raise serializers.ValidationError({
+                'confirmar': 'As senhas não coincidem.'
+            })
+        return data

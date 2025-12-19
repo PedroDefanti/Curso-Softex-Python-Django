@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
 from .models import Tarefa
-from .serializers import TarefaSerializer, ConcluirTodasSerializer,UserRegistrationSerializer
+from .serializers import TarefaSerializer, ConcluirTodasSerializer,UserRegistrationSerializer,ChangePasswordSerializer,UserProfileSerializer
 from django.db import IntegrityError
 import logging
 from django.db.models import Count, Q
@@ -13,7 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
-from .permissions import IsGerente
+from .permissions import Gerente
 
 
 
@@ -239,78 +239,136 @@ class ConcluirTodasTarefasAPIView(APIView):
         )
         
 class MinhaView(APIView):
-# Adicionando a permissão
+
     permission_classes = [IsAuthenticated]
     def get(self, request):
-    # Se chegou aqui, request.user é SEMPRE um objeto User logado
+
         print(f"Usuário autenticado: {request.user.username}")
         return Response(f'Usuario Autenticado:{request.user.username}',status=status.HTTP_200_OK)
-# ...
 
-class LogoutView(APIView):
+class Sair(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
             refresh_token = request.data.get("refresh")
             token = RefreshToken(refresh_token)
-            token.blacklist() # Adiciona o token à lista negra
+            token.blacklist() 
             
             return Response({"detail": "Logout realizado com sucesso."},status=status.HTTP_205_RESET_CONTENT,)
-        except Exception: # Captura exceções como token_not_valid
+        except Exception: 
             return Response(
             {"detail": "Token inválido."},
             status=status.HTTP_400_BAD_REQUEST)
 
-class TarefaListCreateAPIView(generics.ListCreateAPIView):
+class TarefaListaCriarAPIView(generics.ListCreateAPIView):
     serializer_class = TarefaSerializer
-    permission_classes = [IsAuthenticated] # Exige Token válido
+    permission_classes = [IsAuthenticated] 
     def get_queryset(self):
-        """
-        Sobrescreve o comportamento padrão para retornar APENAS
-        os dados pertencentes ao usuário logado.
-        """
-        # 1. Recupera o usuário validado pelo JWT
+
         user = self.request.user
-        # 2. Retorna o filtro. O Django fará o WHERE user_id = X no banco.
         return Tarefa.objects.filter(user=user)
     def perform_create(self, serializer):
-        # Garante que a tarefa criada seja vinculada ao usuário logado
         serializer.save(user=self.request.user)
         
-class TarefaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class TarefaListarCriarAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TarefaSerializer
     permission_classes = [IsAuthenticated]
-    def get_queryset(self):
-        """
-        Garante que operações de detalhe (GET, PUT, DELETE por ID)
-        só encontrem o objeto se ele pertencer ao usuário.
-        """
+    def criar_logado(self):
+
         user = self.request.user
         return Tarefa.objects.filter(user=user)
 
-class RegisterView(generics.CreateAPIView):
-    """
-    Endpoint para cadastro de novos usuários.
-    Acesso: Público (Qualquer um pode criar conta).
-    """
+class Regitrar_view(generics.CreateAPIView):
+
     queryset = User.objects.all()
-    permission_classes = [AllowAny] # Sobrescreve o padrão global
+    permission_classes = [AllowAny] 
     serializer_class = UserRegistrationSerializer
 
-class TarefaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+class TarefaDetalhesAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TarefaSerializer
-    # Removemos a linha estática 'permission_classes' para usar o método dinâmico
+
     def get_queryset(self):
         return Tarefa.objects.filter(user=self.request.user)
     def get_permissions(self):
-        """
-        Instancia e retorna a lista de permissões que esta view requer,
-        dependendo do método HTTP da requisição.
-        """
+
         if self.request.method == 'DELETE':
-        # Para deletar: Precisa estar logado E ser Gerente
-        # A ordem importa: primeiro checa login, depois o grupo
-            return [IsAuthenticated(), IsGerente()]
-        # Para GET, PUT, PATCH: Basta estar logado (e ser dono, garantido pelo queryset)
+
+            return [IsAuthenticated(), Gerente()]
+     
         return [IsAuthenticated()]
 
+class Minha(generics.RetrieveAPIView):
+
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self):
+
+        return self.request.user
+
+
+class Mudar_senha(APIView):
+
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        user = request.user
+        serializer = ChangePasswordSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        old_password = serializer.validated_data.get('old_password')
+        if not user.check_password(old_password):
+            return Response(
+                {'error': 'Senha atual incorreta'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+
+        new_password = serializer.validated_data.get('new_password')
+        user.set_password(new_password)
+        user.save()
+        
+        logger.info(f"[INFO]: Usuário {user.username} alterou a senha com sucesso")
+        
+        return Response(
+            {'detail': 'Senha alterada com sucesso'},
+            status=status.HTTP_200_OK
+        )
+
+
+class Ver_user(APIView):
+
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        
+
+        tarefas = Tarefa.objects.filter(user=user)
+        
+
+        stats = tarefas.aggregate(
+            total_tarefas=Count('id'),
+            concluidas=Count('id', filter=Q(concluida=True)),
+            pendentes=Count('id', filter=Q(concluida=False))
+        )
+        
+        total = stats['total_tarefas']
+        concluidas = stats['concluidas']
+        
+
+        taxa_conclusao = round(concluidas / total, 2) if total > 0 else 0
+        
+        resultado = {
+            'total_tarefas': total,
+            'concluidas': concluidas,
+            'pendentes': stats['pendentes'],
+            'taxa_conclusao': taxa_conclusao
+        }
+        
+        return Response(resultado, status=status.HTTP_200_OK)

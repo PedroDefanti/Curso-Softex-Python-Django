@@ -1,25 +1,40 @@
 from django.urls import path 
-from .views import (ListaTarefasAPIView, 
-                    ContagemTarefasAPIView, 
-                    EstatisticasTarefasAPIView,
-                    DetalheTarefaAPIView,
-                    DuplicarTarefaAPIView,
-                    ConcluirTodasTarefasAPIView,LogoutView,
-                    TarefaListCreateAPIView,
-                    TarefaRetrieveUpdateDestroyAPIView,
-                    RegisterView)
-# Namespace do app (útil para reverse()) 
+from .views import (
+    ListaTarefasAPIView, 
+    ContagemTarefasAPIView, 
+    EstatisticasTarefasAPIView,
+    DetalheTarefaAPIView,
+    DuplicarTarefaAPIView,
+    ConcluirTodasTarefasAPIView,
+    Sair,
+    TarefaListaCriarAPIView,
+    TarefaDetalhesAPIView,
+    Regitrar_view,
+
+    MinhaView,
+    Mudar_senha,
+    Ver_user
+)
+
+
 app_name = 'core' 
+
 urlpatterns = [ 
-
-    path('tarefas/', TarefaListCreateAPIView.as_view(), name='tarefas-list'),
-    path('tarefas/<int:pk>/', TarefaRetrieveUpdateDestroyAPIView.as_view(), name='tarefas-detail'),
-
+    # Endpoints de tarefas
+    path('tarefas/', TarefaListaCriarAPIView.as_view(), name='tarefas-list'),
+    path('tarefas/<int:pk>/', TarefaDetalhesAPIView.as_view(), name='tarefas-detail'),
     path('tarefas/contagem/', ContagemTarefasAPIView.as_view(), name='contagem-tarefas'),
     path('tarefas/estatisticas/', EstatisticasTarefasAPIView.as_view(), name='estatisticas-tarefas'),
     path('tarefas/<int:pk>/duplicar/', DuplicarTarefaAPIView.as_view(), name='duplicar-tarefa'),
     path('tarefas/concluir-todas/', ConcluirTodasTarefasAPIView.as_view(), name='concluir-todas'),
 
-    path('register/', RegisterView.as_view(), name='register'),
-    path('logout/', LogoutView.as_view(), name='logout'),
+    path('registro/', Regitrar_view.as_view(), name='registro'),
+    path('sair/', Sair.as_view(), name='sair'),
+    
+
+    path('minha/', MinhaView.as_view(), name='user-me'),
+ 
+    path('mudar_senha/',Mudar_senha.as_view(), name='mudar senah'),
+
+    path('ver/', Ver_user.as_view(), name='ver senha'),
 ]
